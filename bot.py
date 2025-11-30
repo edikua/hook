@@ -54,6 +54,10 @@ def webhook():
         if not symbol:
             return jsonify({"error": "Missing 'symbol' field"}), 400
 
+        # Clean symbol - remove .P suffix if present (TradingView Bybit Perpetual format)
+        if symbol.endswith(".P"):
+            symbol = symbol[:-2]
+
         # Validate qty if provided
         if qty is not None:
             try:
