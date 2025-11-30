@@ -91,6 +91,7 @@ A Flask webhook bot that receives alerts from TradingView and executes trades on
 |----------|-------------|
 | `BYBIT_API_KEY` | Your Bybit API key |
 | `BYBIT_API_SECRET` | Your Bybit API secret |
+| `BYBIT_TESTNET` | Set to `true` to use Bybit testnet (default: `false`) |
 | `PORT` | Port to run the server (default: 5000) |
 
 ## License

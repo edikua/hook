@@ -1,18 +1,28 @@
+import logging
 import os
+
 from flask import Flask, request, jsonify
 from pybit.unified_trading import HTTP
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
 # Read API keys from environment variables
 API_KEY = os.environ.get("BYBIT_API_KEY")
 API_SECRET = os.environ.get("BYBIT_API_SECRET")
+USE_TESTNET = os.environ.get("BYBIT_TESTNET", "false").lower() == "true"
 
 
 def get_client():
     """Create and return a Bybit HTTP client."""
+    if not API_KEY or not API_SECRET:
+        raise ValueError("BYBIT_API_KEY and BYBIT_API_SECRET must be set")
+
     return HTTP(
-        testnet=False,
+        testnet=USE_TESTNET,
         api_key=API_KEY,
         api_secret=API_SECRET,
     )
@@ -43,6 +53,24 @@ def webhook():
 
         if not symbol:
             return jsonify({"error": "Missing 'symbol' field"}), 400
+
+        # Validate qty if provided
+        if qty is not None:
+            try:
+                qty_val = float(qty)
+                if qty_val <= 0:
+                    return jsonify({"error": "qty must be a positive number"}), 400
+            except (ValueError, TypeError):
+                return jsonify({"error": "qty must be a valid number"}), 400
+
+        # Validate price if provided
+        if price is not None:
+            try:
+                price_val = float(price)
+                if price_val <= 0:
+                    return jsonify({"error": "price must be a positive number"}), 400
+            except (ValueError, TypeError):
+                return jsonify({"error": "price must be a valid number"}), 400
 
         client = get_client()
 
@@ -117,8 +145,12 @@ def webhook():
         else:
             return jsonify({"error": f"Unknown action: {action}"}), 400
 
+    except ValueError as e:
+        logger.error("Validation error: %s", str(e))
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        logger.error("Unexpected error processing webhook: %s", str(e))
+        return jsonify({"error": "Internal server error"}), 500
 
 
 if __name__ == "__main__":
